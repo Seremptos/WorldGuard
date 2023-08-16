@@ -19,10 +19,15 @@
 
 package com.sk89q.worldguard.bukkit.listener;
 
+import com.google.common.collect.Sets;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldguard.LocalPlayer;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
+import com.sk89q.worldguard.bukkit.protection.events.PlayerEnterRegionEvent;
+import com.sk89q.worldguard.bukkit.protection.events.PlayerExitRegionEvent;
+import com.sk89q.worldguard.protection.regions.ProtectedRegion;
+import com.sk89q.worldguard.protection.regions.RegionQuery;
 import com.sk89q.worldguard.session.MoveType;
 import com.sk89q.worldguard.session.Session;
 import io.papermc.lib.PaperLib;
@@ -42,6 +47,8 @@ import org.bukkit.event.vehicle.VehicleEnterEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.util.Vector;
 import org.spigotmc.event.entity.EntityMountEvent;
+
+import java.util.Set;
 
 public class PlayerMoveListener extends AbstractListener {
 
@@ -135,6 +142,16 @@ public class PlayerMoveListener extends AbstractListener {
                 Bukkit.getScheduler().runTaskLater(getPlugin(), () -> player.teleport(override.clone().add(0, 1, 0)), 1);
             }
         }
+
+        RegionQuery query = WorldGuard.getInstance().getPlatform().getRegionContainer().createQuery();
+        Set<ProtectedRegion> fromSet = query.getApplicableRegions(BukkitAdapter.adapt(from)).getRegions();
+        Set<ProtectedRegion> toSet = query.getApplicableRegions(BukkitAdapter.adapt(to)).getRegions();
+
+        Set<ProtectedRegion> entered = Sets.difference(toSet, fromSet);
+        Set<ProtectedRegion> exited = Sets.difference(fromSet, toSet);
+
+        new PlayerEnterRegionEvent(player, entered).callEvent();
+        new PlayerExitRegionEvent(player, exited).callEvent();
     }
 
     @EventHandler
